@@ -99,8 +99,9 @@ export default function Popup() {
                 <div key={t.topic} style={s.row}>
                   <span style={s.topic}>{t.topic}</span>
                   <div style={s.bar}>
-                    <div style={{ ...s.barFill, width: `${Math.min(t.velocity * 30, 100)}%` }} />
+                    <div style={{ ...s.barFill, width: `${Math.min(Math.max(t.slope, 0) * 60, 100)}%` }} />
                   </div>
+                  <span style={s.forecast}>{t.forecast7d > 0.1 ? `↑${t.forecast7d.toFixed(1)}` : "—"}</span>
                 </div>
               ))}
             </div>
@@ -149,7 +150,8 @@ const s: Record<string, React.CSSProperties> = {
   list:         { display: "flex", flexDirection: "column", gap: 8 },
   row:          { display: "flex", alignItems: "center", gap: 10 },
   topic:        { fontSize: 13, flex: "0 0 140px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
-  bar:          { flex: 1, height: 4, background: "#f0f0f0", borderRadius: 2, overflow: "hidden" },
+  bar:          { flex: 1, height: 4, background: "#f0f0f0", borderRadius: 2, overflow: "hidden", minWidth: 40 },
+  forecast:     { fontSize: 11, color: "#999", flex: "0 0 36px", textAlign: "right" },
   barFill:      { height: "100%", background: "#111", borderRadius: 2, transition: "width 0.4s ease" },
   forecastBox:  { background: "#fafafa", borderRadius: 8, padding: 14, maxHeight: 360, overflowY: "auto" },
   forecastText: { margin: 0, lineHeight: 1.7, fontSize: 13 },

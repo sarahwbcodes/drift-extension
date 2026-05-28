@@ -9,9 +9,9 @@ export interface Visit {
 export interface TopicTrend {
   topic: string
   total: number
-  recent: number    // visits in last 3 days
-  older: number     // visits in days 4-14
-  velocity: number  // recent / (older + 1) — higher = accelerating
+  recent: number      // visits in last 3 days
+  slope: number       // EWMA linear trend — positive = accelerating
+  forecast7d: number  // predicted daily visits 7 days from now
 }
 
 export interface DriftState {
@@ -55,31 +55,51 @@ export async function saveForecast(forecast: string): Promise<void> {
   await chrome.storage.local.set({ [KEY]: state })
 }
 
+const WINDOW = 14  // days of history
+const ALPHA = 0.4  // EWMA decay — higher = more weight on recent days
+const DAY = 1000 * 60 * 60 * 24
+
 export function computeTrends(visits: Visit[]): TopicTrend[] {
   const now = Date.now()
-  const threeDays = 1000 * 60 * 60 * 24 * 3
-  const fourteenDays = 1000 * 60 * 60 * 24 * 14
 
-  const map: Record<string, { recent: number; older: number }> = {}
-
+  // Bucket each topic into daily visit counts [day0=oldest ... day13=today]
+  const topicDays: Record<string, number[]> = {}
   for (const visit of visits) {
     const age = now - visit.timestamp
-    if (age > fourteenDays) continue
+    if (age > WINDOW * DAY) continue
+    const dayIndex = WINDOW - 1 - Math.floor(age / DAY)
     for (const topic of visit.topics) {
-      if (!map[topic]) map[topic] = { recent: 0, older: 0 }
-      if (age <= threeDays) map[topic].recent++
-      else map[topic].older++
+      if (!topicDays[topic]) topicDays[topic] = new Array(WINDOW).fill(0)
+      topicDays[topic][Math.max(0, Math.min(WINDOW - 1, dayIndex))]++
     }
   }
 
-  return Object.entries(map)
-    .map(([topic, { recent, older }]) => ({
-      topic,
-      total: recent + older,
-      recent,
-      older,
-      velocity: recent / (older + 1),
-    }))
+  return Object.entries(topicDays)
+    .map(([topic, daily]) => {
+      // Exponential weighted moving average
+      const smoothed = new Array(WINDOW).fill(0)
+      smoothed[0] = daily[0]
+      for (let i = 1; i < WINDOW; i++) {
+        smoothed[i] = ALPHA * daily[i] + (1 - ALPHA) * smoothed[i - 1]
+      }
+
+      // Linear regression on smoothed series to get slope
+      const meanX = (WINDOW - 1) / 2
+      const meanY = smoothed.reduce((a, b) => a + b, 0) / WINDOW
+      let num = 0, den = 0
+      for (let i = 0; i < WINDOW; i++) {
+        num += (i - meanX) * (smoothed[i] - meanY)
+        den += (i - meanX) ** 2
+      }
+      const slope = den === 0 ? 0 : num / den
+
+      // Extrapolate 7 days forward from last smoothed value
+      const forecast7d = Math.max(0, smoothed[WINDOW - 1] + slope * 7)
+      const total = daily.reduce((a, b) => a + b, 0)
+      const recent = daily.slice(WINDOW - 3).reduce((a, b) => a + b, 0)
+
+      return { topic, total, recent, slope, forecast7d }
+    })
     .filter((t) => t.total >= 2)
-    .sort((a, b) => b.velocity - a.velocity)
+    .sort((a, b) => b.slope - a.slope)
 }

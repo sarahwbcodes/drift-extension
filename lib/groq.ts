@@ -33,13 +33,15 @@ export async function classifyPage(apiKey: string, title: string, text: string):
   }
 }
 
-const FORECAST_SYSTEM = `You are analyzing someone's browsing patterns over the past two weeks. You have a list of topics ranked by velocity — how much they've accelerated recently vs before.
+const FORECAST_SYSTEM = `You are analyzing someone's browsing patterns over the past two weeks. You have topic trends computed using exponential weighted moving averages and linear regression — slope indicates acceleration, forecast7d is the predicted daily engagement 7 days from now.
 
 Your job: tell the person what they're drifting toward and what that might mean. Be specific and insightful. Reference the actual topics. Suggest 2-3 concrete things they could explore next based on the trajectory.
 
 Keep it to 3 short paragraphs. No bullet points. Write like a smart friend noticing a pattern, not a report.`
 
-export async function forecast(apiKey: string, trends: { topic: string; velocity: number; recent: number }[]): Promise<string> {
-  const top = trends.slice(0, 10).map((t) => `${t.topic} (${t.recent} recent visits, velocity ${t.velocity.toFixed(1)}x)`).join("\n")
-  return call(apiKey, "llama-3.3-70b-versatile", FORECAST_SYSTEM, `Trending topics:\n${top}`, 512)
+export async function forecast(apiKey: string, trends: { topic: string; slope: number; recent: number; forecast7d: number }[]): Promise<string> {
+  const top = trends.slice(0, 10).map((t) =>
+    `${t.topic} (slope: ${t.slope.toFixed(2)}, recent visits: ${t.recent}, predicted in 7d: ${t.forecast7d.toFixed(1)}/day)`
+  ).join("\n")
+  return call(apiKey, "llama-3.3-70b-versatile", FORECAST_SYSTEM, `Topic trends:\n${top}`, 512)
 }
