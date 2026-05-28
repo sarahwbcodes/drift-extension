@@ -1,6 +1,6 @@
 # Drift
 
-Watches your browsing over time and tells you what you're drifting toward — topics accelerating in your reading before you've consciously noticed them.
+The predictive sister of Cue. Watches your browsing over time and tells you what you're drifting toward — topics accelerating in your reading before you've consciously noticed them.
 
 ## How it works
 
