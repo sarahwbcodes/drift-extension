@@ -8,6 +8,12 @@ Every page you visit gets classified into topic tags. Over days, Drift tracks wh
 
 No goal-setting. Fully passive. The insight is the payoff.
 
+## Reading the numbers
+
+Each topic in the trends view shows a bar and a number like `↑5.3`. That number is the **7-day forecast** — how many times per day Drift predicts you'll visit pages on that topic in a week, based on your recent trajectory.
+
+The forecast is calculated using **EWMA (Exponential Weighted Moving Average)** + linear regression. EWMA smooths out noisy day-to-day variation while giving more weight to recent activity — so a topic you started reading heavily this week ranks higher than one you read a lot two weeks ago but have since dropped. A linear trend is then fitted to the smoothed curve and extrapolated 7 days forward.
+
 ## Install
 
 ### 1. Get a Groq API key (free)
